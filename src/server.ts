@@ -44,18 +44,29 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+import { dispatchApiRequest, applySecurityHeaders } from "./server/index";
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+      if (url.pathname.startsWith("/api/")) {
+        return await dispatchApiRequest(request);
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+      applySecurityHeaders(normalized.headers, request.headers.get("origin"));
+      return normalized;
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
+      const errResp = new Response(renderErrorPage(), {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },
       });
+      applySecurityHeaders(errResp.headers, request.headers.get("origin"));
+      return errResp;
     }
   },
 };
