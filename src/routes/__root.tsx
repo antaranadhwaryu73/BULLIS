@@ -23,8 +23,13 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <div className="label-xs">404</div>
         <h1 className="mt-2 text-xl font-semibold text-foreground">Page not found</h1>
-        <p className="mt-2 text-sm text-muted-foreground">This view doesn't exist in the research terminal.</p>
-        <Link to="/" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+        <p className="mt-2 text-sm text-muted-foreground">
+          This view doesn't exist in the research terminal.
+        </p>
+        <Link
+          to="/"
+          className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
           Back to Overview
         </Link>
       </div>
@@ -41,16 +46,26 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">This view didn't load</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Something went wrong. You can retry or head back to the overview.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          This view didn't load
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Something went wrong. You can retry or head back to the overview.
+        </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
             className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Try again
           </button>
-          <a href="/" className="inline-flex rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground hover:bg-accent">
+          <a
+            href="/"
+            className="inline-flex rounded-md border border-input px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+          >
             Go home
           </a>
         </div>
@@ -65,14 +80,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "BULLIS — Trade Beyond The Price" },
-      { name: "description", content: "Research-grade relative-value analytics, anomaly detection, and edge simulation for MCX gold futures." },
+      {
+        name: "description",
+        content:
+          "Research-grade relative-value analytics, anomaly detection, and edge simulation for MCX gold futures.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/brand-logo.jpeg", type: "image/jpeg" },
     ],

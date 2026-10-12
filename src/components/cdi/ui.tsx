@@ -15,15 +15,39 @@ const toneCls: Record<Tone, string> = {
   neutral: "text-muted-foreground bg-muted border-border-strong",
 };
 export const toneText: Record<Tone, string> = {
-  success: "text-success", warning: "text-warning", danger: "text-destructive", info: "text-primary", neutral: "text-muted-foreground",
+  success: "text-success",
+  warning: "text-warning",
+  danger: "text-destructive",
+  info: "text-primary",
+  neutral: "text-muted-foreground",
 };
 export const toneVar: Record<Tone, string> = {
-  success: "var(--success)", warning: "var(--warning)", danger: "var(--destructive)", info: "var(--primary)", neutral: "var(--muted-foreground)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  danger: "var(--destructive)",
+  info: "var(--primary)",
+  neutral: "var(--muted-foreground)",
 };
 
-export function StatusBadge({ tone = "neutral", children, dot = true, className }: { tone?: Tone; children: ReactNode; dot?: boolean; className?: string }) {
+export function StatusBadge({
+  tone = "neutral",
+  children,
+  dot = true,
+  className,
+}: {
+  tone?: Tone;
+  children: ReactNode;
+  dot?: boolean;
+  className?: string;
+}) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded border px-1.5 py-0.5 text-[10.5px] font-semibold tracking-wider uppercase", toneCls[tone], className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded border px-1.5 py-0.5 text-[10.5px] font-semibold tracking-wider uppercase",
+        toneCls[tone],
+        className,
+      )}
+    >
       {dot && <span className="size-1.5 rounded-full bg-current" aria-hidden />}
       {children}
     </span>
@@ -31,7 +55,21 @@ export function StatusBadge({ tone = "neutral", children, dot = true, className 
 }
 
 export const statusTone = (s: string): Tone =>
-  ({ SAFE: "success", PASS: "success", VALID: "success", ok: "success", WATCH: "warning", warn: "warning", Medium: "warning", RESTRICTED: "danger", FAIL: "danger", High: "danger", Low: "info" } as Record<string, Tone>)[s] ?? "neutral";
+  (
+    ({
+      SAFE: "success",
+      PASS: "success",
+      VALID: "success",
+      ok: "success",
+      WATCH: "warning",
+      warn: "warning",
+      Medium: "warning",
+      RESTRICTED: "danger",
+      FAIL: "danger",
+      High: "danger",
+      Low: "info",
+    }) as Record<string, Tone>
+  )[s] ?? "neutral";
 
 export function EvidenceButton({ subject, className }: { subject: string; className?: string }) {
   const open = useEvidence();
@@ -39,14 +77,33 @@ export function EvidenceButton({ subject, className }: { subject: string; classN
     <button
       onClick={() => open(subject)}
       aria-label={`View evidence for ${subject}`}
-      className={cn("inline-flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground", className)}
+      className={cn(
+        "inline-flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+        className,
+      )}
     >
       <FileSearch className="size-3.5" /> Evidence
     </button>
   );
 }
 
-export function Panel({ title, subtitle, actions, children, className, evidence, bodyClassName }: { title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; evidence?: string; bodyClassName?: string }) {
+export function Panel({
+  title,
+  subtitle,
+  actions,
+  children,
+  className,
+  evidence,
+  bodyClassName,
+}: {
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  evidence?: string;
+  bodyClassName?: string;
+}) {
   return (
     <section className={cn("panel flex flex-col", className)}>
       {(title || actions || evidence) && (
@@ -66,7 +123,21 @@ export function Panel({ title, subtitle, actions, children, className, evidence,
   );
 }
 
-export function MetricCard({ label, value, sub, tone, sparkData, evidence }: { label: string; value: ReactNode; sub?: ReactNode; tone?: Tone; sparkData?: { i: number; v: number }[]; evidence?: string }) {
+export function MetricCard({
+  label,
+  value,
+  sub,
+  tone,
+  sparkData,
+  evidence,
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone?: Tone;
+  sparkData?: { i: number; v: number }[];
+  evidence?: string;
+}) {
   const open = useEvidence();
   const color = tone ? toneVar[tone] : "var(--primary)";
   return (
@@ -82,7 +153,11 @@ export function MetricCard({ label, value, sub, tone, sparkData, evidence }: { l
         <span className="label-xs">{label}</span>
         <FileSearch className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
       </div>
-      <div className={cn("num mt-1.5 text-lg font-semibold tracking-tight", tone && toneText[tone])}>{value}</div>
+      <div
+        className={cn("num mt-1.5 text-lg font-semibold tracking-tight", tone && toneText[tone])}
+      >
+        {value}
+      </div>
       {sub && <div className="mt-0.5 text-[11px] text-muted-foreground">{sub}</div>}
       {sparkData && (
         <div className="pointer-events-none absolute right-0 bottom-0 h-10 w-24 opacity-70">
@@ -94,7 +169,13 @@ export function MetricCard({ label, value, sub, tone, sparkData, evidence }: { l
                   <stop offset="100%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <Area dataKey="v" stroke={color} strokeWidth={1.25} fill={`url(#sg-${label.replace(/\W/g, "")})`} isAnimationActive={false} />
+              <Area
+                dataKey="v"
+                stroke={color}
+                strokeWidth={1.25}
+                fill={`url(#sg-${label.replace(/\W/g, "")})`}
+                isAnimationActive={false}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -103,7 +184,17 @@ export function MetricCard({ label, value, sub, tone, sparkData, evidence }: { l
   );
 }
 
-export function PageHeader({ eyebrow, title, subtitle, right }: { eyebrow: string; title: string; subtitle: string; right?: ReactNode }) {
+export function PageHeader({
+  eyebrow,
+  title,
+  subtitle,
+  right,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  right?: ReactNode;
+}) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -116,7 +207,13 @@ export function PageHeader({ eyebrow, title, subtitle, right }: { eyebrow: strin
   );
 }
 
-export function NoSignalPanel({ reasons, compact }: { reasons: { ok: boolean; text: string }[]; compact?: boolean }) {
+export function NoSignalPanel({
+  reasons,
+  compact,
+}: {
+  reasons: { ok: boolean; text: string }[];
+  compact?: boolean;
+}) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-border-strong bg-panel p-4">
       <div className="flex items-start gap-3">
@@ -126,11 +223,14 @@ export function NoSignalPanel({ reasons, compact }: { reasons: { ok: boolean; te
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold tracking-wide">NO ACTIONABLE SIGNAL</h3>
-            <StatusBadge tone="neutral" dot={false}>Evidence threshold not met</StatusBadge>
+            <StatusBadge tone="neutral" dot={false}>
+              Evidence threshold not met
+            </StatusBadge>
           </div>
           {!compact && (
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              The observed deviation does not currently clear the required evidence threshold. This is an informative result, not an error.
+              The observed deviation does not currently clear the required evidence threshold. This
+              is an informative result, not an error.
             </p>
           )}
           <ul className="mt-3 space-y-1.5">
@@ -159,16 +259,35 @@ export function Disclaimer({ children }: { children: ReactNode }) {
   );
 }
 
-export function Seg<T extends string>({ value, onChange, options, label }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[]; label: string }) {
+export function Seg<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+  label: string;
+}) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-md border bg-background/40 p-0.5">
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="inline-flex rounded-md border bg-background/40 p-0.5"
+    >
       {options.map((o) => (
         <button
           key={o.value}
           role="radio"
           aria-checked={value === o.value}
           onClick={() => onChange(o.value)}
-          className={cn("rounded px-2 py-1 text-[11px] font-medium transition-colors", value === o.value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground")}
+          className={cn(
+            "rounded px-2 py-1 text-[11px] font-medium transition-colors",
+            value === o.value
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
         >
           {o.label}
         </button>
@@ -178,8 +297,19 @@ export function Seg<T extends string>({ value, onChange, options, label }: { val
 }
 
 export const chartTooltipStyle = {
-  contentStyle: { background: "var(--popover)", border: "1px solid var(--border-strong)", borderRadius: 6, fontSize: 11, fontFamily: "var(--font-mono)" },
+  contentStyle: {
+    background: "var(--popover)",
+    border: "1px solid var(--border-strong)",
+    borderRadius: 6,
+    fontSize: 11,
+    fontFamily: "var(--font-mono)",
+  },
   labelStyle: { color: "var(--muted-foreground)" },
   itemStyle: { padding: 0 },
 };
-export const axisProps = { stroke: "var(--muted-foreground)", fontSize: 10, tickLine: false, axisLine: false } as const;
+export const axisProps = {
+  stroke: "var(--muted-foreground)",
+  fontSize: 10,
+  tickLine: false,
+  axisLine: false,
+} as const;
