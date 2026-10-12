@@ -4,7 +4,11 @@ type ErrorOptions = {
   severity?: "error" | "warning" | "info";
 };
 
-export function reportAppError(error: unknown, context: Record<string, unknown> = {}, options?: ErrorOptions) {
+export function reportAppError(
+  error: unknown,
+  context: Record<string, unknown> = {},
+  options?: ErrorOptions,
+) {
   if (typeof window === "undefined") return;
 
   const message =

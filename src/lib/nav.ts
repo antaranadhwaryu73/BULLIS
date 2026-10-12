@@ -1,4 +1,12 @@
-import { Calculator, Database, Dna, FlaskConical, LayoutDashboard, Network, Radar } from "lucide-react";
+import {
+  Calculator,
+  Database,
+  Dna,
+  FlaskConical,
+  LayoutDashboard,
+  Network,
+  Radar,
+} from "lucide-react";
 
 export const nav = [
   { to: "/", n: "01", label: "Overview", icon: LayoutDashboard },
