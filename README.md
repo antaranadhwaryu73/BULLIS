@@ -44,25 +44,42 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/technovaarko11-hue/display-exact-echo.git
-cd display-exact-echo
+git clone https://github.com/antaranadhwaryu73/BULLIS.git
+cd BULLIS
 
 # Install dependencies
 npm install
 
-# Start development server
+# Start full-stack server (Frontend UI + Institutional Backend API)
 npm run dev
 ```
 
-Visit [http://localhost:8080](http://localhost:8080) to access the research terminal.
+Visit the services:
+
+- **Frontend Terminal**: [http://localhost:8080](http://localhost:8080)
+- **Backend Health & Telemetry**: [http://localhost:8080/api/v1/health](http://localhost:8080/api/v1/health)
+- **Backend API Endpoints**: [http://localhost:8080/api/v1/contracts](http://localhost:8080/api/v1/contracts), `/pricing/term-structure`, `/anomalies`, `/risk/radar`, `/audit/verify`
+
+### Testing the Backend
+
+```bash
+# Check backend health & system vitals
+curl http://localhost:8080/api/v1/health
+
+# Verify tamper-evident cryptographic audit ledger
+curl http://localhost:8080/api/v1/audit/verify
+```
 
 ### Production Build
 
 ```bash
-# Type check and build
+# Type check and build SSR & Nitro production bundles
 npm run build
 
-# Run unit and integration tests
+# Preview production build
+npm run preview
+
+# Run unit and integration tests (Frontend + Backend)
 npm run test
 ```
 
