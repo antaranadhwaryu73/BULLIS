@@ -1,37 +1,107 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  LabelList,
+} from "recharts";
 import { motion } from "framer-motion";
-import { RotateCcw, ShieldCheck, ShieldX } from "lucide-react";
+import { RotateCcw, ShieldCheck, ShieldX, Play, TrendingUp, Loader2, Landmark } from "lucide-react";
 import { pageMeta } from "@/lib/meta";
 import { fmtINR } from "@/lib/mock-data";
 import { PageHeader, Panel, Disclaimer, axisProps, chartTooltipStyle } from "@/components/cdi/ui";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { useBacktestMutation } from "@/hooks/use-terminal-data";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/edge-simulator")({
-  head: () => pageMeta("Edge Survival Simulator", "Test whether an apparent relative-value edge survives fees, slippage, delays, funding and liquidity haircuts."),
+  head: () =>
+    pageMeta(
+      "Edge Survival Simulator",
+      "Test whether an apparent relative-value edge survives fees, slippage, delays, funding and liquidity haircuts.",
+    ),
   component: EdgeSim,
 });
 
-const defaults = { brokerage: 40, exchange: 26, taxes: 18, gst: 12, stamp: 6, slippage: 95, entryDelay: 1, exitDelay: 1, funding: 22, size: 1, haircut: 15 };
+const defaults = {
+  brokerage: 40,
+  exchange: 26,
+  taxes: 18,
+  gst: 12,
+  stamp: 6,
+  slippage: 95,
+  entryDelay: 1,
+  exitDelay: 1,
+  funding: 22,
+  size: 1,
+  haircut: 15,
+};
 type Params = typeof defaults;
 
-const controls: { key: keyof Params; label: string; min: number; max: number; step: number; unit: string; group: string }[] = [
+const controls: {
+  key: keyof Params;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  group: string;
+}[] = [
   { key: "brokerage", label: "Brokerage", min: 0, max: 150, step: 1, unit: "₹", group: "Fees" },
   { key: "exchange", label: "Exchange fees", min: 0, max: 100, step: 1, unit: "₹", group: "Fees" },
   { key: "taxes", label: "Taxes (CTT)", min: 0, max: 80, step: 1, unit: "₹", group: "Fees" },
   { key: "gst", label: "GST", min: 0, max: 50, step: 1, unit: "₹", group: "Fees" },
   { key: "stamp", label: "Stamp duty", min: 0, max: 30, step: 1, unit: "₹", group: "Fees" },
   { key: "slippage", label: "Slippage", min: 0, max: 300, step: 5, unit: "₹", group: "Execution" },
-  { key: "entryDelay", label: "Entry delay", min: 0, max: 5, step: 1, unit: "sess", group: "Execution" },
-  { key: "exitDelay", label: "Exit delay", min: 0, max: 5, step: 1, unit: "sess", group: "Execution" },
+  {
+    key: "entryDelay",
+    label: "Entry delay",
+    min: 0,
+    max: 5,
+    step: 1,
+    unit: "sess",
+    group: "Execution",
+  },
+  {
+    key: "exitDelay",
+    label: "Exit delay",
+    min: 0,
+    max: 5,
+    step: 1,
+    unit: "sess",
+    group: "Execution",
+  },
   { key: "funding", label: "Funding", min: 0, max: 120, step: 1, unit: "₹", group: "Carry & size" },
-  { key: "size", label: "Position size", min: 1, max: 20, step: 1, unit: "lots", group: "Carry & size" },
-  { key: "haircut", label: "Liquidity haircut", min: 0, max: 60, step: 1, unit: "%", group: "Carry & size" },
+  {
+    key: "size",
+    label: "Position size",
+    min: 1,
+    max: 20,
+    step: 1,
+    unit: "lots",
+    group: "Carry & size",
+  },
+  {
+    key: "haircut",
+    label: "Liquidity haircut",
+    min: 0,
+    max: 60,
+    step: 1,
+    unit: "%",
+    group: "Carry & size",
+  },
 ];
 
-const GROSS = 412, BUFFER = 91;
+const GROSS = 412,
+  BUFFER = 91;
 
 function compute(p: Params) {
   const fees = p.brokerage + p.exchange + p.taxes + p.gst + p.stamp;
@@ -47,6 +117,33 @@ function EdgeSim() {
   const [p, setP] = useState<Params>(defaults);
   const r = useMemo(() => compute(p), [p]);
   const survives = r.net > 0;
+  const backtestMutation = useBacktestMutation();
+
+  const handleRunBacktest = () => {
+    backtestMutation.mutate(
+      {
+        pairId: "GOLDM-GOLDTEN",
+        entryZ: 2.0,
+        exitZ: 0.5,
+        stopZ: 3.5,
+        maxHoldingDays: 15,
+        capitalINR: 1000000,
+        slippageTicks: Math.max(1, Math.round(p.slippage / 50)),
+      },
+      {
+        onSuccess: (data) => {
+          toast.success("Walk-Forward Simulation Complete", {
+            description: `Win Rate: ${data.winRatePct}% · Sharpe: ${data.sharpeRatio.outOfSample} · Net PnL: ${fmtINR(data.netPnL)}`,
+          });
+        },
+        onError: (err) => {
+          toast.error("Backtest Failed", {
+            description: (err as Error).message,
+          });
+        },
+      },
+    );
+  };
 
   const steps = [
     { name: "Gross edge", v: GROSS, kind: "gross" },
@@ -60,9 +157,14 @@ function EdgeSim() {
   ];
   let run = 0;
   const data = steps.map((s) => {
-    if (s.kind === "gross") { run = s.v; return { ...s, range: [0, s.v] }; }
+    if (s.kind === "gross") {
+      run = s.v;
+      return { ...s, range: [0, s.v] };
+    }
     if (s.kind === "net") return { ...s, range: [0, s.v] };
-    const start = run; run += s.v; return { ...s, range: [run, start] };
+    const start = run;
+    run += s.v;
+    return { ...s, range: [run, start] };
   });
 
   const breakEvenSlip = Math.max(0, p.slippage + r.net);
@@ -73,36 +175,80 @@ function EdgeSim() {
         eyebrow="03 · Edge Simulator"
         title="Edge Survival Simulator"
         subtitle="Does the apparent edge survive real-world friction?"
-        right={<button onClick={() => setP(defaults)} className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs hover:bg-accent"><RotateCcw className="size-3.5" /> Reset assumptions</button>}
+        right={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRunBacktest}
+              disabled={backtestMutation.isPending}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {backtestMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Play className="size-3.5 fill-current" />
+              )}
+              {backtestMutation.isPending ? "Running Engine..." : "Run Walk-Forward Engine"}
+            </button>
+            <button
+              onClick={() => setP(defaults)}
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs hover:bg-accent"
+            >
+              <RotateCcw className="size-3.5" /> Reset assumptions
+            </button>
+          </div>
+        }
       />
       <div className="grid gap-5 xl:grid-cols-[380px_1fr]">
-        <Panel title="Friction assumptions" subtitle="Per spread round-trip, 1 lot pair basis" className="xl:sticky xl:top-20 xl:self-start">
+        <Panel
+          title="Friction assumptions"
+          subtitle="Per spread round-trip, 1 lot pair basis"
+          className="xl:sticky xl:top-20 xl:self-start"
+        >
           <div className="space-y-5">
             {["Fees", "Execution", "Carry & size"].map((g) => (
               <fieldset key={g}>
                 <legend className="label-xs mb-2">{g}</legend>
                 <div className="space-y-3.5">
-                  {controls.filter((c) => c.group === g).map((c) => (
-                    <div key={c.key}>
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <label htmlFor={c.key} className="text-xs">{c.label}</label>
-                        <div className="flex items-center gap-1">
-                          <input
-                            id={c.key}
-                            type="number"
-                            min={c.min}
-                            max={c.max}
-                            step={c.step}
-                            value={p[c.key]}
-                            onChange={(e) => setP({ ...p, [c.key]: Math.min(c.max, Math.max(c.min, Number(e.target.value) || 0)) })}
-                            className="num w-16 rounded border bg-background/60 px-1.5 py-0.5 text-right text-xs focus:border-primary focus:outline-none"
-                          />
-                          <span className="w-7 text-[10px] text-muted-foreground">{c.unit}</span>
+                  {controls
+                    .filter((c) => c.group === g)
+                    .map((c) => (
+                      <div key={c.key}>
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <label htmlFor={c.key} className="text-xs">
+                            {c.label}
+                          </label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              id={c.key}
+                              type="number"
+                              min={c.min}
+                              max={c.max}
+                              step={c.step}
+                              value={p[c.key]}
+                              onChange={(e) =>
+                                setP({
+                                  ...p,
+                                  [c.key]: Math.min(
+                                    c.max,
+                                    Math.max(c.min, Number(e.target.value) || 0),
+                                  ),
+                                })
+                              }
+                              className="num w-16 rounded border bg-background/60 px-1.5 py-0.5 text-right text-xs focus:border-primary focus:outline-none"
+                            />
+                            <span className="w-7 text-[10px] text-muted-foreground">{c.unit}</span>
+                          </div>
                         </div>
+                        <Slider
+                          aria-label={c.label}
+                          min={c.min}
+                          max={c.max}
+                          step={c.step}
+                          value={[p[c.key]]}
+                          onValueChange={([v]) => setP({ ...p, [c.key]: v })}
+                        />
                       </div>
-                      <Slider aria-label={c.label} min={c.min} max={c.max} step={c.step} value={[p[c.key]]} onValueChange={([v]) => setP({ ...p, [c.key]: v })} />
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </fieldset>
             ))}
@@ -114,13 +260,31 @@ function EdgeSim() {
             key={survives ? "y" : "n"}
             initial={{ opacity: 0.6, scale: 0.995 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={cn("flex flex-wrap items-center gap-4 rounded-lg border p-4", survives ? "border-success/30 bg-success/5" : "border-destructive/30 bg-destructive/5")}
+            className={cn(
+              "flex flex-wrap items-center gap-4 rounded-lg border p-4",
+              survives
+                ? "border-success/30 bg-success/5"
+                : "border-destructive/30 bg-destructive/5",
+            )}
           >
-            {survives ? <ShieldCheck className="size-8 text-success" /> : <ShieldX className="size-8 text-destructive" />}
+            {survives ? (
+              <ShieldCheck className="size-8 text-success" />
+            ) : (
+              <ShieldX className="size-8 text-destructive" />
+            )}
             <div className="flex-1">
-              <div className={cn("text-lg font-semibold tracking-wide", survives ? "text-success" : "text-destructive")}>{survives ? "EDGE SURVIVES" : "EDGE DOES NOT SURVIVE"}</div>
+              <div
+                className={cn(
+                  "text-lg font-semibold tracking-wide",
+                  survives ? "text-success" : "text-destructive",
+                )}
+              >
+                {survives ? "EDGE SURVIVES" : "EDGE DOES NOT SURVIVE"}
+              </div>
               <p className="text-xs text-muted-foreground">
-                {survives ? "Under these assumptions the edge exceeds total friction plus the uncertainty buffer. This is an analytical result, not a trade recommendation." : "Total friction plus the uncertainty buffer exceeds the gross edge under these assumptions."}
+                {survives
+                  ? "Under these assumptions the edge exceeds total friction plus the uncertainty buffer. This is an analytical result, not a trade recommendation."
+                  : "Total friction plus the uncertainty buffer exceeds the gross edge under these assumptions."}
               </p>
             </div>
           </motion.div>
@@ -130,7 +294,11 @@ function EdgeSim() {
               ["Gross edge", fmtINR(GROSS), ""],
               ["Estimated costs", fmtINR(r.costs), ""],
               ["Uncertainty buffer", fmtINR(BUFFER), ""],
-              ["Net edge", (r.net < 0 ? "−" : "") + fmtINR(Math.abs(r.net)), survives ? "text-success" : "text-destructive"],
+              [
+                "Net edge",
+                (r.net < 0 ? "−" : "") + fmtINR(Math.abs(r.net)),
+                survives ? "text-success" : "text-destructive",
+              ],
               ["Break-even slippage", fmtINR(breakEvenSlip), "text-primary"],
             ].map(([k, v, t]) => (
               <div key={k} className="panel p-3.5">
@@ -140,26 +308,168 @@ function EdgeSim() {
             ))}
           </div>
 
-          <Panel title="Edge waterfall" subtitle="From gross statistical edge to net edge after friction and uncertainty" evidence="Edge waterfall">
-            <div className="h-[380px]" role="img" aria-label={`Waterfall chart: gross edge ₹412, net edge ₹${r.net}`}>
+          <Panel
+            title="Edge waterfall"
+            subtitle="From gross statistical edge to net edge after friction and uncertainty"
+            evidence="Edge waterfall"
+          >
+            <div
+              className="h-[380px]"
+              role="img"
+              aria-label={`Waterfall chart: gross edge ₹412, net edge ₹${r.net}`}
+            >
               <ResponsiveContainer>
                 <BarChart data={data} margin={{ top: 24, right: 8, left: 0 }}>
                   <CartesianGrid stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="name" {...axisProps} interval={0} fontSize={10} />
                   <YAxis {...axisProps} width={48} tickFormatter={(v) => "₹" + v} />
                   <ReferenceLine y={0} stroke="var(--border-strong)" />
-                  <Tooltip {...chartTooltipStyle} formatter={(_, __, item) => fmtINR((item.payload as { v: number }).v)} cursor={{ fill: "var(--accent)", opacity: 0.3 }} />
+                  <Tooltip
+                    {...chartTooltipStyle}
+                    formatter={(_, __, item) => fmtINR((item.payload as { v: number }).v)}
+                    cursor={{ fill: "var(--accent)", opacity: 0.3 }}
+                  />
                   <Bar dataKey="range" radius={[3, 3, 3, 3]} animationDuration={400}>
                     {data.map((d) => (
-                      <Cell key={d.name} fill={d.kind === "gross" ? "var(--primary)" : d.kind === "net" ? (survives ? "var(--success)" : "var(--destructive)") : d.kind === "buffer" ? "var(--warning)" : "var(--secondary)"} />
+                      <Cell
+                        key={d.name}
+                        fill={
+                          d.kind === "gross"
+                            ? "var(--primary)"
+                            : d.kind === "net"
+                              ? survives
+                                ? "var(--success)"
+                                : "var(--destructive)"
+                              : d.kind === "buffer"
+                                ? "var(--warning)"
+                                : "var(--secondary)"
+                        }
+                      />
                     ))}
-                    <LabelList dataKey="v" position="top" formatter={(v: number) => (v < 0 ? "−" : "") + "₹" + Math.abs(v)} style={{ fill: "var(--muted-foreground)", fontSize: 10, fontFamily: "var(--font-mono)" }} />
+                    <LabelList
+                      dataKey="v"
+                      position="top"
+                      formatter={(v: number) => (v < 0 ? "−" : "") + "₹" + Math.abs(v)}
+                      style={{
+                        fill: "var(--muted-foreground)",
+                        fontSize: 10,
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </Panel>
-          <Disclaimer>The gross edge is derived from settlement-price residuals. Executable prices may differ; the uncertainty buffer represents 1.5× the model's residual standard error.</Disclaimer>
+
+          {/* Institutional Walk-Forward Engine Results */}
+          {backtestMutation.data && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-lg border border-primary/30 bg-card p-4 space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="size-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">
+                    Walk-Forward Engine Results · {backtestMutation.data.params.pairId}
+                  </span>
+                </div>
+                <span className="num text-xs text-muted-foreground">
+                  {backtestMutation.data.totalTrades} completed trades
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded border bg-background/50 p-2.5">
+                  <div className="label-xs">Win Rate</div>
+                  <div className="num mt-1 text-base font-semibold text-success">
+                    {backtestMutation.data.winRatePct}%
+                  </div>
+                </div>
+                <div className="rounded border bg-background/50 p-2.5">
+                  <div className="label-xs">Sharpe Ratio</div>
+                  <div className="num mt-1 text-base font-semibold text-primary">
+                    {backtestMutation.data.sharpeRatio.outOfSample}
+                  </div>
+                </div>
+                <div className="rounded border bg-background/50 p-2.5">
+                  <div className="label-xs">Profit Factor</div>
+                  <div className="num mt-1 text-base font-semibold">
+                    {backtestMutation.data.profitFactor}
+                  </div>
+                </div>
+                <div className="rounded border bg-background/50 p-2.5">
+                  <div className="label-xs">Max Drawdown</div>
+                  <div className="num mt-1 text-base font-semibold text-destructive">
+                    {backtestMutation.data.maxDrawdownPct}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded border bg-background/30 p-3 space-y-2 text-xs">
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <Landmark className="size-3.5 text-muted-foreground" />
+                  Statutory Costs & Friction Breakdown:
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-muted-foreground sm:grid-cols-3">
+                  <div>
+                    Commodities Tax (CTT):{" "}
+                    <span className="num font-medium text-foreground">
+                      ₹{backtestMutation.data.frictionBreakdown?.ctt ?? 76}
+                    </span>
+                  </div>
+                  <div>
+                    Exchange Turnover:{" "}
+                    <span className="num font-medium text-foreground">
+                      ₹{backtestMutation.data.frictionBreakdown?.exchangeCharges ?? 20}
+                    </span>
+                  </div>
+                  <div>
+                    SEBI Turnover:{" "}
+                    <span className="num font-medium text-foreground">
+                      ₹{backtestMutation.data.frictionBreakdown?.sebiCharges ?? 8}
+                    </span>
+                  </div>
+                  <div>
+                    State Stamp Duty:{" "}
+                    <span className="num font-medium text-foreground">
+                      ₹{backtestMutation.data.frictionBreakdown?.stampDuty ?? 15}
+                    </span>
+                  </div>
+                  <div>
+                    GST on Charges:{" "}
+                    <span className="num font-medium text-foreground">
+                      ₹{backtestMutation.data.frictionBreakdown?.gst ?? 12}
+                    </span>
+                  </div>
+                  <div>
+                    Slippage Cost:{" "}
+                    <span className="num font-medium text-foreground">
+                      ₹{backtestMutation.data.frictionBreakdown?.slippageCost ?? 95}
+                    </span>
+                  </div>
+                </div>
+                <div className="border-t border-border pt-2 flex items-center justify-between font-semibold">
+                  <span>Net Realized PnL:</span>
+                  <span
+                    className={cn(
+                      "num text-sm",
+                      backtestMutation.data.netPnL >= 0 ? "text-success" : "text-destructive",
+                    )}
+                  >
+                    {fmtINR(backtestMutation.data.netPnL)}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          <Disclaimer>
+            The gross edge is derived from settlement-price residuals. Executable prices may differ;
+            the uncertainty buffer represents 1.5× the model's residual standard error.
+          </Disclaimer>
         </div>
       </div>
     </>

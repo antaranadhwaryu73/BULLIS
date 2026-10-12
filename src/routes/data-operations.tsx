@@ -1,30 +1,94 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Play, CheckCircle2, AlertOctagon, ShieldCheck, RefreshCw, Loader2 } from "lucide-react";
 import { pageMeta } from "@/lib/meta";
-import { PageHeader, Panel, MetricCard, StatusBadge, statusTone, Disclaimer, EvidenceButton, chartTooltipStyle, axisProps } from "@/components/cdi/ui";
+import {
+  PageHeader,
+  Panel,
+  MetricCard,
+  StatusBadge,
+  statusTone,
+  Disclaimer,
+  EvidenceButton,
+  chartTooltipStyle,
+  axisProps,
+} from "@/components/cdi/ui";
+import {
+  useLivePipeline,
+  useLiveQuarantine,
+  useLiveAudit,
+  useIngestRecordMutation,
+  useAuditVerification,
+} from "@/hooks/use-terminal-data";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/data-operations")({
-  head: () => pageMeta("Data Operations", "Ingestion pipeline status and validation errors for MCX data."),
+  head: () =>
+    pageMeta("Data Operations", "Ingestion pipeline status and validation errors for MCX data."),
   component: DataOps,
 });
 
 const pipeline = [
   { name: "MCX Bhavcopy ingest", status: "SAFE", last: "30 SEP 18:42", rows: "1,284", lat: "2.1s" },
-  { name: "Contract spec engine", status: "SAFE", last: "30 SEP 18:43", rows: "4 specs", lat: "0.3s" },
+  {
+    name: "Contract spec engine",
+    status: "SAFE",
+    last: "30 SEP 18:43",
+    rows: "4 specs",
+    lat: "0.3s",
+  },
   { name: "Price normalisation", status: "SAFE", last: "30 SEP 18:43", rows: "1,284", lat: "0.8s" },
-  { name: "Expiry calendar sync", status: "WATCH", last: "29 SEP 09:00", rows: "18 events", lat: "—" },
+  {
+    name: "Expiry calendar sync",
+    status: "WATCH",
+    last: "29 SEP 09:00",
+    rows: "18 events",
+    lat: "—",
+  },
   { name: "Fair-value model", status: "SAFE", last: "30 SEP 18:45", rows: "6 pairs", lat: "4.6s" },
-  { name: "Anomaly scoring", status: "RESTRICTED", last: "30 SEP 18:45", rows: "5 / 6 pairs", lat: "1.9s" },
+  {
+    name: "Anomaly scoring",
+    status: "RESTRICTED",
+    last: "30 SEP 18:45",
+    rows: "5 / 6 pairs",
+    lat: "1.9s",
+  },
 ];
 
 const checks = [
-  { check: "Quote basis consistent with spec", scope: "All contracts", status: "SAFE", detail: "0 mismatches" },
-  { check: "Purity factor applied", scope: "GOLDGUINEA", status: "SAFE", detail: "0.9167 fineness verified" },
-  { check: "Tender-period flag", scope: "GOLDM", status: "WATCH", detail: "Inside tender window since 29 SEP" },
-  { check: "Stale price (>1 session)", scope: "GOLDPETAL", status: "RESTRICTED", detail: "No trade on 26 SEP" },
+  {
+    check: "Quote basis consistent with spec",
+    scope: "All contracts",
+    status: "SAFE",
+    detail: "0 mismatches",
+  },
+  {
+    check: "Purity factor applied",
+    scope: "GOLDGUINEA",
+    status: "SAFE",
+    detail: "0.9167 fineness verified",
+  },
+  {
+    check: "Tender-period flag",
+    scope: "GOLDM",
+    status: "WATCH",
+    detail: "Inside tender window since 29 SEP",
+  },
+  {
+    check: "Stale price (>1 session)",
+    scope: "GOLDPETAL",
+    status: "RESTRICTED",
+    detail: "No trade on 26 SEP",
+  },
   { check: "Volume / OI non-negative", scope: "All contracts", status: "SAFE", detail: "Passed" },
-  { check: "Spec version change", scope: "GOLDM", status: "WATCH", detail: "2026.1 → 2026.2 on 06 JUN" },
+  {
+    check: "Spec version change",
+    scope: "GOLDM",
+    status: "WATCH",
+    detail: "2026.1 → 2026.2 on 06 JUN",
+  },
 ];
 
 const latency = [
@@ -35,9 +99,27 @@ const latency = [
 ];
 
 const initialGaps = [
-  { id: 1, contract: "GOLDPETAL", session: "26 SEP 2026", reason: "No trades reported", action: "pending" },
-  { id: 2, contract: "GOLDGUINEA", session: "15 AUG 2026", reason: "Exchange holiday mismatch", action: "pending" },
-  { id: 3, contract: "GOLDTEN", session: "02 JUL 2026", reason: "File received late", action: "repaired" },
+  {
+    id: 1,
+    contract: "GOLDPETAL",
+    session: "26 SEP 2026",
+    reason: "No trades reported",
+    action: "pending",
+  },
+  {
+    id: 2,
+    contract: "GOLDGUINEA",
+    session: "15 AUG 2026",
+    reason: "Exchange holiday mismatch",
+    action: "pending",
+  },
+  {
+    id: 3,
+    contract: "GOLDTEN",
+    session: "02 JUL 2026",
+    reason: "File received late",
+    action: "repaired",
+  },
 ];
 
 const log = [
@@ -49,30 +131,143 @@ const log = [
 
 function DataOps() {
   const [gaps, setGaps] = useState(initialGaps);
-  const act = (id: number, action: string) => setGaps((g) => g.map((x) => (x.id === id ? { ...x, action } : x)));
+  const act = (id: number, action: string) =>
+    setGaps((g) => g.map((x) => (x.id === id ? { ...x, action } : x)));
   const open = gaps.filter((g) => g.action === "pending").length;
+
+  const { data: pipelineStages } = useLivePipeline();
+  const { data: quarantineRecords } = useLiveQuarantine();
+  const { data: auditLogs } = useLiveAudit();
+  const {
+    data: auditVerification,
+    refetch: refetchAudit,
+    isFetching: isVerifying,
+  } = useAuditVerification();
+  const ingestMutation = useIngestRecordMutation();
+
+  const handleTestIngest = () => {
+    ingestMutation.mutate(
+      {
+        symbol: "GOLDM",
+        expiry: "2026-10-05",
+        open: 76850,
+        high: 77120,
+        low: 76780,
+        close: 77010,
+        settlePrice: 77010,
+        volume: 16420,
+        openInterest: 8930,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        onSuccess: (res) => {
+          if (res.success && !res.quarantined) {
+            toast.success("Bhavcopy Record Ingested", {
+              description: "Normalized mark appended to database & audit ledger.",
+            });
+          } else {
+            toast.warning("Record Quarantined", {
+              description: res.message,
+            });
+          }
+        },
+      },
+    );
+  };
+
+  const handleVerifyLedger = async () => {
+    const res = await refetchAudit();
+    if (res.data?.verified) {
+      toast.success("Cryptographic Ledger Valid", {
+        description: `Verified ${res.data.recordCount} sequential blocks. All SHA-256 signatures match.`,
+      });
+    }
+  };
+
+  const displayPipeline = useMemo(() => {
+    if (pipelineStages?.length) {
+      return pipelineStages.map((p) => ({
+        name: p.stage,
+        status: p.status === "ok" ? "SAFE" : p.status === "warn" ? "WATCH" : "RESTRICTED",
+        last: "Just now",
+        rows: p.meta,
+        lat: `${p.latencyMs}ms`,
+      }));
+    }
+    return pipeline;
+  }, [pipelineStages]);
 
   return (
     <>
-      <PageHeader eyebrow="07 · Data Operations" title="Data Operations" subtitle="Pipeline health, validation checks and missing-session reconciliation." right={<EvidenceButton subject="Pipeline run 30 SEP 2026" />} />
+      <PageHeader
+        eyebrow="07 · Data Operations"
+        title="Data Operations"
+        subtitle="Pipeline health, validation checks, cryptographic ledger and missing-session reconciliation."
+        right={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleTestIngest}
+              disabled={ingestMutation.isPending}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {ingestMutation.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Play className="size-3.5 fill-current" />
+              )}
+              Ingest Test Bhavcopy
+            </button>
+            <button
+              onClick={handleVerifyLedger}
+              disabled={isVerifying}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs hover:bg-accent transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={cn("size-3.5", isVerifying && "animate-spin")} />
+              Verify Ledger
+            </button>
+          </div>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Data quality score" value="96.4%" tone="success" sub="Last 90 sessions" />
+        <MetricCard
+          label="Data quality score"
+          value="96.4%"
+          tone="success"
+          sub="Last 90 sessions"
+        />
         <MetricCard label="Sessions ingested" value="90 / 92" sub="2 missing" tone="warning" />
-        <MetricCard label="Validation checks" value="4 / 6 pass" tone="warning" sub="2 warnings, 1 block" />
-        <MetricCard label="Open gaps" value={String(open)} tone={open ? "danger" : "success"} sub="Awaiting review" />
+        <MetricCard
+          label="Validation checks"
+          value="4 / 6 pass"
+          tone="warning"
+          sub="2 warnings, 1 block"
+        />
+        <MetricCard
+          label="Open gaps"
+          value={String(open)}
+          tone={open ? "danger" : "success"}
+          sub="Awaiting review"
+        />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <Panel title="Pipeline status" subtitle="Latest run per stage">
+        <Panel title="Pipeline status" subtitle="Live backend stages & latency">
           <div className="space-y-2">
-            {pipeline.map((p) => (
-              <div key={p.name} className="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-border py-2 text-sm">
+            {displayPipeline.map((p) => (
+              <div
+                key={p.name}
+                className="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-border py-2 text-sm"
+              >
                 <div>
-                  <div>{p.name}</div>
-                  <div className="font-mono text-[11px] text-muted-foreground">{p.last} · {p.rows} · {p.lat}</div>
+                  <div className="font-medium">{p.name}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground">
+                    {p.last} · {p.rows} · {p.lat}
+                  </div>
                 </div>
-                <StatusBadge tone={statusTone(p.status)}>{p.status === "SAFE" ? "Healthy" : p.status === "WATCH" ? "Delayed" : "Degraded"}</StatusBadge>
+                <StatusBadge tone={statusTone(p.status)}>
+                  {p.status === "SAFE" ? "Healthy" : p.status === "WATCH" ? "Delayed" : "Degraded"}
+                </StatusBadge>
               </div>
             ))}
           </div>
@@ -81,12 +276,19 @@ function DataOps() {
         <Panel title="Validation checks" subtitle="Run after every ingest">
           <div className="space-y-2">
             {checks.map((c) => (
-              <div key={c.check} className="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-border py-2 text-sm">
+              <div
+                key={c.check}
+                className="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-border py-2 text-sm"
+              >
                 <div>
                   <div>{c.check}</div>
-                  <div className="font-mono text-[11px] text-muted-foreground">{c.scope} · {c.detail}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground">
+                    {c.scope} · {c.detail}
+                  </div>
                 </div>
-                <StatusBadge tone={statusTone(c.status)}>{c.status === "SAFE" ? "Pass" : c.status === "WATCH" ? "Warn" : "Block"}</StatusBadge>
+                <StatusBadge tone={statusTone(c.status)}>
+                  {c.status === "SAFE" ? "Pass" : c.status === "WATCH" ? "Warn" : "Block"}
+                </StatusBadge>
               </div>
             ))}
           </div>
@@ -94,11 +296,20 @@ function DataOps() {
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_380px]">
-        <Panel title="Missing-session reconciliation" subtitle="Choose how each gap should be handled; models exclude unresolved sessions">
+        <Panel
+          title="Missing-session reconciliation"
+          subtitle="Choose how each gap should be handled; models exclude unresolved sessions"
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="text-left text-muted-foreground">
-                <tr>{["Contract", "Session", "Reason", "Status", "Action"].map((h) => <th key={h} className="px-2 py-2 font-normal">{h}</th>)}</tr>
+                <tr>
+                  {["Contract", "Session", "Reason", "Status", "Action"].map((h) => (
+                    <th key={h} className="px-2 py-2 font-normal">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {gaps.map((g) => (
@@ -106,15 +317,42 @@ function DataOps() {
                     <td className="px-2 py-2 font-mono">{g.contract}</td>
                     <td className="px-2 font-mono">{g.session}</td>
                     <td className="px-2">{g.reason}</td>
-                    <td className="px-2"><StatusBadge tone={g.action === "pending" ? "warning" : g.action === "excluded" ? "neutral" : "success"}>{g.action}</StatusBadge></td>
+                    <td className="px-2">
+                      <StatusBadge
+                        tone={
+                          g.action === "pending"
+                            ? "warning"
+                            : g.action === "excluded"
+                              ? "neutral"
+                              : "success"
+                        }
+                      >
+                        {g.action}
+                      </StatusBadge>
+                    </td>
                     <td className="px-2">
                       {g.action === "pending" ? (
                         <div className="flex gap-1">
-                          <button onClick={() => act(g.id, "repaired")} className="rounded border border-border px-2 py-1 hover:bg-accent">Interpolate</button>
-                          <button onClick={() => act(g.id, "excluded")} className="rounded border border-border px-2 py-1 hover:bg-accent">Exclude</button>
+                          <button
+                            onClick={() => act(g.id, "repaired")}
+                            className="rounded border border-border px-2 py-1 hover:bg-accent"
+                          >
+                            Interpolate
+                          </button>
+                          <button
+                            onClick={() => act(g.id, "excluded")}
+                            className="rounded border border-border px-2 py-1 hover:bg-accent"
+                          >
+                            Exclude
+                          </button>
                         </div>
                       ) : (
-                        <button onClick={() => act(g.id, "pending")} className="text-muted-foreground underline">Undo</button>
+                        <button
+                          onClick={() => act(g.id, "pending")}
+                          className="text-muted-foreground underline"
+                        >
+                          Undo
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -141,12 +379,80 @@ function DataOps() {
         </Panel>
       </div>
 
-      <Panel title="Event log" className="mt-4">
-        <div className="space-y-1 font-mono text-[11px] text-muted-foreground">
-          {log.map((l) => <div key={l}>{l}</div>)}
+      {/* Quarantine Ledger Panel */}
+      {quarantineRecords && quarantineRecords.length > 0 && (
+        <Panel
+          title="Data Quarantine Ledger"
+          subtitle="Records intercepted by multi-factor validation gates prior to pricing"
+          className="mt-4"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-left text-muted-foreground">
+                <tr className="border-b border-border">
+                  <th className="px-2 py-2 font-normal">Contract</th>
+                  <th className="px-2 font-normal">Session</th>
+                  <th className="px-2 font-normal">Quarantine Code</th>
+                  <th className="px-2 font-normal">Flagged Values</th>
+                  <th className="px-2 text-right font-normal">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quarantineRecords.map((q) => (
+                  <tr key={q.id} className="border-b border-border/50">
+                    <td className="px-2 py-2 font-mono font-semibold text-warning">{q.row}</td>
+                    <td className="px-2 font-mono text-muted-foreground">{q.timestamp}</td>
+                    <td className="px-2 font-mono text-[11px] text-destructive">{q.code}</td>
+                    <td className="px-2 font-mono text-[11px] text-muted-foreground">{q.reason}</td>
+                    <td className="px-2 text-right">
+                      <StatusBadge tone="danger">{q.action}</StatusBadge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      )}
+
+      {/* Cryptographic Audit Event Log */}
+      <Panel
+        title="Cryptographic SHA-256 Audit Trail"
+        subtitle="Sequential tamper-evident event stream"
+        className="mt-4"
+      >
+        <div className="space-y-1.5 font-mono text-[11px]">
+          {auditLogs && auditLogs.length > 0
+            ? auditLogs.slice(0, 8).map((l) => (
+                <div
+                  key={l.index}
+                  className="flex items-center justify-between border-b border-border/40 py-1 text-muted-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-primary font-semibold">{l.action}</span>
+                    <span className="text-foreground">[{l.resource}]</span>
+                    <span className="truncate max-w-[320px]">{JSON.stringify(l.details)}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px]">
+                    <span className="text-muted-foreground/80">
+                      {new Date(l.timestamp).toLocaleTimeString()}
+                    </span>
+                    <span className="rounded bg-accent/60 px-1.5 py-0.5 text-foreground font-mono">
+                      hash: {l.hash.slice(0, 10)}...
+                    </span>
+                  </div>
+                </div>
+              ))
+            : log.map((l) => (
+                <div key={l} className="text-muted-foreground">
+                  {l}
+                </div>
+              ))}
         </div>
       </Panel>
-      <Disclaimer>Pipeline figures are sample data for demonstration; no live exchange feed is connected.</Disclaimer>
+      <Disclaimer>
+        Pipeline figures are sample data for demonstration; no live exchange feed is connected.
+      </Disclaimer>
     </>
   );
 }
