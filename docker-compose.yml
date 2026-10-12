@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  bullis-terminal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bullis-terminal:latest
+    container_name: bullis-terminal
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - HOST=0.0.0.0
+      - BULLIS_RATE_LIMIT_MAX=120
+      - BULLIS_RATE_LIMIT_WINDOW_MS=60000
+    volumes:
+      - bullis-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  bullis-data:
+    driver: local

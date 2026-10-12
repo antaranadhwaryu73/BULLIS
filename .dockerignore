@@ -1,0 +1,12 @@
+node_modules
+.git
+.github
+.agents
+dist
+.output
+.vite
+data/*.json
+data/*.tmp
+*.log
+.DS_Store
+Thumbs.db
