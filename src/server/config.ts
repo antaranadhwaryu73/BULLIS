@@ -27,6 +27,13 @@ export interface ServerConfig {
     sebiTurnoverPerCrore: number; // ₹10
     gstRate: number; // 0.18 (18% GST)
   };
+  external: {
+    goldSpotApiKey?: string;
+    goldSpotProvider: string;
+    supabaseKey?: string;
+    neonApiKey?: string;
+    upstashToken?: string;
+  };
 }
 
 export const serverConfig: ServerConfig = {
@@ -53,5 +60,12 @@ export const serverConfig: ServerConfig = {
     stampDutyRate: 0.00002,
     sebiTurnoverPerCrore: 10,
     gstRate: 0.18,
+  },
+  external: {
+    goldSpotApiKey: process.env["GOLD_SPOT_API_KEY"],
+    goldSpotProvider: process.env["GOLD_SPOT_PROVIDER"] || "goldapi",
+    supabaseKey: process.env["SUPABASE_KEY"],
+    neonApiKey: process.env["NEON_API_KEY"],
+    upstashToken: process.env["UPSTASH_REDIS_REST_TOKEN"],
   },
 };

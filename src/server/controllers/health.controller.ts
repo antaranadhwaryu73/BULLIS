@@ -29,6 +29,12 @@ export async function handleHealthCheck(): Promise<Response> {
       derivativesPricing: { status: "ONLINE", baseSpotPrice: 76200 },
       riskRadarEngine: { status: "ONLINE" },
     },
+    integrations: {
+      goldSpotProvider: serverConfig.external.goldSpotApiKey ? "CONFIGURED" : "SIMULATION_FALLBACK",
+      supabase: serverConfig.external.supabaseKey ? "KEY_DETECTED" : "NOT_CONFIGURED",
+      neonTech: serverConfig.external.neonApiKey ? "KEY_DETECTED" : "NOT_CONFIGURED",
+      upstashRedis: serverConfig.external.upstashToken ? "TOKEN_DETECTED" : "NOT_CONFIGURED",
+    },
   };
 
   return new Response(JSON.stringify(payload, null, 2), {
