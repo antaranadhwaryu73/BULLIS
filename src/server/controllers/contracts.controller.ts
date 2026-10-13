@@ -4,12 +4,14 @@
 
 import { z } from "zod";
 import { contractQuoteStore, MCX_CONTRACT_SPECS } from "../domain/contracts";
+import { liveSpotService } from "../domain/spot-service";
 import { ContractId, MarketQuote } from "../domain/types";
 import { parseAndSanitizeJson } from "../security/sanitizer";
 import { auditLedger } from "../security/audit-logger";
 import { UserSession } from "../security/auth";
 
 export async function handleGetContracts(): Promise<Response> {
+  await liveSpotService.getSpot();
   const quotes = contractQuoteStore.getAllQuotes();
   const result = quotes.map((q) => {
     const spec = MCX_CONTRACT_SPECS[q.contractId];

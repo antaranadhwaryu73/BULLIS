@@ -24,6 +24,7 @@ import {
 import {
   handleGetFairValue,
   handleGetPairs,
+  handleGetSpot,
   handleGetTermStructure,
 } from "./controllers/pricing.controller";
 import { handleGetAnomalies } from "./controllers/anomaly.controller";
@@ -135,7 +136,9 @@ export async function dispatchApiRequest(request: Request): Promise<Response> {
       response = await handleUpdateQuote(request, id, user, clientIp);
     }
     // --- PRICING & FAIR VALUE ---
-    else if (path === "/api/v1/pricing/term-structure" && method === "GET") {
+    else if (path === "/api/v1/pricing/spot" && method === "GET") {
+      response = await handleGetSpot();
+    } else if (path === "/api/v1/pricing/term-structure" && method === "GET") {
       response = await handleGetTermStructure();
     } else if (path === "/api/v1/pricing/pairs" && method === "GET") {
       response = await handleGetPairs();

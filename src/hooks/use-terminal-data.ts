@@ -10,6 +10,7 @@ import { RawBhavcopyRecord } from "@/server/domain/data-pipeline";
 export const QUERY_KEYS = {
   health: ["terminal", "health"],
   dbStats: ["terminal", "dbStats"],
+  spot: ["terminal", "pricing", "spot"],
   contracts: ["terminal", "contracts"],
   contract: (id: string) => ["terminal", "contract", id],
   termStructure: ["terminal", "pricing", "termStructure"],
@@ -21,6 +22,15 @@ export const QUERY_KEYS = {
   audit: ["terminal", "audit", "logs"],
   auditVerify: ["terminal", "audit", "verify"],
 };
+
+export function useLiveSpot() {
+  return useQuery({
+    queryKey: QUERY_KEYS.spot,
+    queryFn: () => api.getSpot(),
+    refetchInterval: 15000,
+    staleTime: 10000,
+  });
+}
 
 export function useSystemHealth() {
   return useQuery({

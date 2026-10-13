@@ -186,6 +186,80 @@ export class ContractQuoteStore {
     this.quotes.set(id, updated);
     return updated;
   }
+
+  public recalibrateFromSpot(spot24k: number, spot22k: number): void {
+    const goldQ = this.quotes.get("GOLD");
+    if (goldQ) {
+      const fairCarry = Math.round(spot24k * (1 + 0.074 * (goldQ.daysToExpiry / 365)));
+      this.updateQuote("GOLD", {
+        lastPrice: fairCarry - 12,
+        open: fairCarry - 80,
+        high: fairCarry + 150,
+        low: fairCarry - 110,
+        close: fairCarry - 25,
+        bid: fairCarry - 13,
+        ask: fairCarry - 11,
+      });
+    }
+
+    const goldmQ = this.quotes.get("GOLDM");
+    if (goldmQ) {
+      const fairCarry = Math.round(spot24k * (1 + 0.074 * (goldmQ.daysToExpiry / 365)));
+      this.updateQuote("GOLDM", {
+        lastPrice: fairCarry + 20,
+        open: fairCarry - 60,
+        high: fairCarry + 190,
+        low: fairCarry - 95,
+        close: fairCarry + 10,
+        bid: fairCarry + 19,
+        ask: fairCarry + 21,
+      });
+    }
+
+    const goldTenQ = this.quotes.get("GOLDTEN");
+    if (goldTenQ) {
+      const fairCarry = Math.round(spot24k * (1 + 0.074 * (goldTenQ.daysToExpiry / 365)));
+      this.updateQuote("GOLDTEN", {
+        lastPrice: fairCarry + 145,
+        open: fairCarry + 50,
+        high: fairCarry + 220,
+        low: fairCarry + 30,
+        close: fairCarry + 130,
+        bid: fairCarry + 144,
+        ask: fairCarry + 146,
+      });
+    }
+
+    const guineaQ = this.quotes.get("GOLDGUINEA");
+    if (guineaQ) {
+      const guineaSpot8g = Math.round((spot22k / 10) * 8);
+      const fairCarry = Math.round(guineaSpot8g * (1 + 0.074 * (guineaQ.daysToExpiry / 365)));
+      this.updateQuote("GOLDGUINEA", {
+        lastPrice: fairCarry,
+        open: fairCarry - 50,
+        high: fairCarry + 120,
+        low: fairCarry - 70,
+        close: fairCarry,
+        bid: fairCarry - 1,
+        ask: fairCarry + 1,
+      });
+    }
+
+    const petalQ = this.quotes.get("GOLDPETAL");
+    if (petalQ) {
+      const petalSpot1g = Math.round(spot24k / 10);
+      const fairCarry = Math.round(petalSpot1g * (1 + 0.074 * (petalQ.daysToExpiry / 365)));
+      this.updateQuote("GOLDPETAL", {
+        lastPrice: petalSpot1g + 5,
+        open: petalSpot1g - 2,
+        high: petalSpot1g + 12,
+        low: petalSpot1g - 4,
+        close: petalSpot1g,
+        bid: petalSpot1g + 4,
+        ask: petalSpot1g + 6,
+      });
+    }
+  }
 }
 
 export const contractQuoteStore = new ContractQuoteStore();

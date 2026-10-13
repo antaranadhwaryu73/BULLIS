@@ -48,7 +48,7 @@ import { DrawerProvider, useContractDrawer } from "./drawers";
 import { StatusBadge } from "./ui";
 import { useTheme } from "@/lib/theme";
 import { nav } from "@/lib/nav";
-import { useSystemHealth, useLiveContracts, useAuditVerification } from "@/hooks/use-terminal-data";
+import { useSystemHealth, useLiveContracts, useAuditVerification, useLiveSpot } from "@/hooks/use-terminal-data";
 import { toast } from "sonner";
 
 export { nav };
@@ -263,6 +263,7 @@ function Palette({ open, setOpen }: { open: boolean; setOpen: (o: boolean) => vo
 ───────────────────────────────────────────────── */
 function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { theme, setTheme } = useTheme();
+  const { data: spotData } = useLiveSpot();
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -356,12 +357,27 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
 
           {/* Data */}
           <section>
-            <div className="label-xs mb-3">Data & Privacy</div>
+            <div className="label-xs mb-3">Live Market Data Feeds</div>
             <div className="space-y-2">
               {[
-                { label: "Data snapshot", value: "30 SEP 2026 18:44 IST" },
-                { label: "Session mode", value: "Institutional Kernel v1.0" },
-                { label: "Data source", value: "MCX BhavCopy & ACID DB" },
+                {
+                  label: "Live Gold Spot (24K)",
+                  value: spotData
+                    ? `₹${spotData.spotPrice24kPer10g.toLocaleString("en-IN")} / 10g`
+                    : "Connecting...",
+                },
+                {
+                  label: "Live Gold Spot (22K)",
+                  value: spotData
+                    ? `₹${spotData.spotPrice22kPer10g.toLocaleString("en-IN")} / 10g`
+                    : "Connecting...",
+                },
+                {
+                  label: "Spot Provider",
+                  value: spotData?.provider ?? "GoldAPI.io",
+                },
+                { label: "Data snapshot", value: "Real-time Live Market" },
+                { label: "Session mode", value: "Institutional Terminal" },
                 { label: "Auth Token", value: "bullis_live_analyst_2026 (Analyst)" },
               ].map(({ label, value }) => (
                 <div
@@ -584,6 +600,7 @@ function ShellInner({ children }: { children: ReactNode }) {
 
   const { data: health } = useSystemHealth();
   const { data: liveContracts } = useLiveContracts();
+  const { data: spotData } = useLiveSpot();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -678,6 +695,16 @@ function ShellInner({ children }: { children: ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-3 lg:gap-5">
+            <TopStat label="Spot 24K">
+              {spotData ? (
+                <span className="font-semibold text-warning flex items-center gap-1">
+                  ₹{spotData.spotPrice24kPer10g.toLocaleString("en-IN")}
+                  <span className="text-[9px] text-success">● LIVE</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Connecting...</span>
+              )}
+            </TopStat>
             <TopStat label="Data date">30 SEP 2026</TopStat>
             <TopStat label="MCX data">
               {health?.status === "healthy" ? (

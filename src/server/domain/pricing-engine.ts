@@ -19,7 +19,17 @@ export interface TermStructurePoint {
 }
 
 export class DerivativesPricingEngine {
-  private baseSpotPrice = 76200; // Benchmark pure physical gold spot ₹ / 10g
+  private baseSpotPrice = 127791; // Benchmark pure physical gold spot ₹ / 10g (defaults to current live benchmark)
+
+  public setBaseSpotPrice(spot: number): void {
+    if (spot > 0) {
+      this.baseSpotPrice = spot;
+    }
+  }
+
+  public getBaseSpotPrice(): number {
+    return this.baseSpotPrice;
+  }
 
   /**
    * Calculates theoretical futures fair value under continuous/linear cost-of-carry

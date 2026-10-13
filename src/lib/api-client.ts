@@ -126,6 +126,24 @@ class InstitutionalApiClient {
   }
 
   // Pricing & Curves
+  public async getSpot() {
+    const res = await this.request<{
+      data: {
+        pricePerOunce: number;
+        spotPrice24kPer10g: number;
+        spotPrice22kPer10g: number;
+        highPer10g: number;
+        lowPer10g: number;
+        change: number;
+        changePct: number;
+        timestamp: string;
+        isLive: boolean;
+        provider: string;
+      };
+    }>("/api/v1/pricing/spot");
+    return res.data;
+  }
+
   public async getTermStructure() {
     const res = await this.request<{ data: TermStructurePoint[] }>(
       "/api/v1/pricing/term-structure",
@@ -138,7 +156,7 @@ class InstitutionalApiClient {
     return res.data;
   }
 
-  public async getFairValue(dte = 30, spot = 76200) {
+  public async getFairValue(dte = 30, spot = 127791) {
     return this.request<{
       spot: number;
       daysToExpiry: number;

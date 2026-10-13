@@ -43,11 +43,9 @@ export const contracts: Contract[] = [
     purity: 0.995,
     tickSize: "₹1",
     listingDate: "06 JUN 2026",
-    lastTradingDate: "05 OCT 2026",
-    tenderStart: "29 SEP 2026",
     deliveryDate: "05 OCT 2026",
     specVersion: "MCX-SPEC-GM-2026.2",
-    rawPrice: 76412,
+    rawPrice: 127920,
     volume: 18420,
     oi: 12840,
     color: "var(--chart-1)",
@@ -69,7 +67,7 @@ export const contracts: Contract[] = [
     tenderStart: "24 OCT 2026",
     deliveryDate: "30 OCT 2026",
     specVersion: "MCX-SPEC-GT-2026.1",
-    rawPrice: 76538,
+    rawPrice: 128060,
     volume: 9640,
     oi: 7120,
     color: "var(--chart-2)",
@@ -91,7 +89,7 @@ export const contracts: Contract[] = [
     tenderStart: "24 OCT 2026",
     deliveryDate: "30 OCT 2026",
     specVersion: "MCX-SPEC-GG-2025.4",
-    rawPrice: 56270,
+    rawPrice: 93710,
     volume: 3120,
     oi: 2480,
     color: "var(--chart-3)",
@@ -108,12 +106,12 @@ export const contracts: Contract[] = [
     q: 1,
     purity: 0.995,
     tickSize: "₹1",
-    listingDate: "01 AUG 2026",
+    listingDate: "01 JUL 2026",
     lastTradingDate: "30 OCT 2026",
     tenderStart: "24 OCT 2026",
     deliveryDate: "30 OCT 2026",
     specVersion: "MCX-SPEC-GP-2026.1",
-    rawPrice: 7648,
+    rawPrice: 12790,
     volume: 41200,
     oi: 15800,
     color: "var(--chart-4)",
@@ -140,7 +138,7 @@ export const priceSeries = (() => {
     [k: string]: number | string;
   };
   const out: Row[] = [];
-  let base = 74200;
+  let base = 126200;
   const start = new Date(Date.UTC(2026, 5, 3));
   let d = 0;
   for (let i = 0; out.length < 90; i++) {
